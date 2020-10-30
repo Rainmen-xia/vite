@@ -9,6 +9,7 @@ declare const __DEFINES__: Record<string, any>
 ;(window as any).process.env.NODE_ENV = __MODE__
 
 const defines = __DEFINES__
+const projectName = '__PROJECT_NAME__'
 Object.keys(defines).forEach((key) => {
   const segs = key.split('.')
   let target = window as any
@@ -30,7 +31,7 @@ console.log('[vite] connecting...')
 declare var __VUE_HMR_RUNTIME__: HMRRuntime
 
 const socketProtocol = location.protocol === 'https:' ? 'wss' : 'ws'
-const socketUrl = `${socketProtocol}://${location.hostname}:${__PORT__}`
+const socketUrl = `${socketProtocol}://${location.hostname}:${__PORT__}/${projectName}`
 const socket = new WebSocket(socketUrl, 'vite-hmr')
 
 function warnFailedFetch(err: Error, path: string | string[]) {

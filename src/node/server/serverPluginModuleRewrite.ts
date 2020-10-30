@@ -90,6 +90,8 @@ export const moduleRewritePlugin: ServerPlugin = ({
         const importer = removeUnRelatedHmrQuery(
           resolver.normalizePublicPath(ctx.url)
         )
+
+        // console.log("rainmenxia todo");
         ctx.body = rewriteImports(
           root,
           content!,
@@ -132,6 +134,8 @@ export function rewriteImports(
     let imports: ImportSpecifier[] = []
     try {
       imports = parseImports(source)[0]
+
+      // console.log("rainmenxia--imports",imports)
     } catch (e) {
       console.error(
         chalk.yellow(
@@ -210,7 +214,15 @@ export function rewriteImports(
 
       if (hasHMR) {
         debugHmr(`rewriting ${importer} for HMR.`)
+
+        // console.log("rainmenxia");
+        // console.log(importer);
+        //if (!/\/sw.js/.test(importer)) {
+        // console.log("inn");
         rewriteFileWithHMR(root, source, importer, resolver, s)
+        //}
+        // console.log("rainmenxia");
+
         hasReplaced = true
       }
 
@@ -263,16 +275,22 @@ export const resolveImport = (
   resolver: InternalResolver,
   timestamp?: string
 ): string => {
+  //console.log("rainmenixa-id-soruce",id)
+
   id = resolver.alias(id) || id
 
+  //console.log("rainmenixa-id-alias",id)
   if (bareImportRE.test(id)) {
     // directly resolve bare module names to its entry path so that relative
     // imports from it (including source map urls) can work correctly
     id = `/@modules/${resolveBareModuleRequest(root, id, importer, resolver)}`
+    // console.log("rainmenixa-id-in",id)
   } else {
     // 1. relative to absolute
     //    ./foo -> /some/path/foo
     let { pathname, query } = resolver.resolveRelativeRequest(importer, id)
+    //console.trace("rainmenxia,here");
+    // console.log("rainmenixa-resolverelative importer,id,pathname,query:",importer,id,pathname,query)
 
     // 2. resolve dir index and extensions.
     pathname = resolver.normalizePublicPath(pathname)

@@ -32,10 +32,12 @@ import slash from 'slash'
 import { isCSSRequest } from '../utils/cssUtils'
 import { Node, StringLiteral, Statement, Expression } from '@babel/types'
 import { resolveCompiler } from '../utils'
-import { HMRPayload } from '../../hmrPayload'
+import { HMRPayload, UpdatePayload } from '../../hmrPayload'
 import { clientPublicPath } from './serverPluginClient'
 
 export const debugHmr = require('debug')('vite:hmr')
+
+var CLIENTS: { [key: string]: Array<any> } = {}
 
 export type HMRWatcher = FSWatcher & {
   handleVueReload: (
@@ -79,6 +81,7 @@ export const hmrPlugin: ServerPlugin = ({
   // start a websocket server to send hmr notifications to the client
   const wss = new WebSocket.Server({ noServer: true })
   server.on('upgrade', (req, socket, head) => {
+    // console.log(wss.clients);
     if (req.headers['sec-websocket-protocol'] === 'vite-hmr') {
       wss.handleUpgrade(req, socket, head, (ws) => {
         wss.emit('connection', ws, req)
@@ -86,8 +89,13 @@ export const hmrPlugin: ServerPlugin = ({
     }
   })
 
-  wss.on('connection', (socket) => {
+  wss.on('connection', (socket, s) => {
     debugHmr('ws client connected')
+    console.log(s.url)
+    let projectName = s.url!.replace('/', '')
+    CLIENTS[projectName] = []
+    CLIENTS[projectName].push(socket)
+    //console.log(CLIENTS);
     socket.send(JSON.stringify({ type: 'connected' }))
   })
 
@@ -99,14 +107,34 @@ export const hmrPlugin: ServerPlugin = ({
   })
 
   const send = (watcher.send = (payload: HMRPayload) => {
+    //console.log("watcher");
+    //console.log(watcher);
+
     const stringified = JSON.stringify(payload, null, 2)
     debugHmr(`update: ${stringified}`)
 
-    wss.clients.forEach((client) => {
+    const { path } = payload as UpdatePayload
+    let projectName = ''
+
+    if (path) {
+      let arr: any = path.match(/projects\/(.*)\/src\//)
+      if (arr == null) {
+        projectName = 'xrepo'
+      } else {
+        projectName = arr.length > 1 ? arr[1] : ''
+      }
+    }
+    CLIENTS[projectName].forEach((client) => {
       if (client.readyState === WebSocket.OPEN) {
         client.send(stringified)
       }
     })
+
+    // wss.clients.forEach((client) => {
+    //   if (client.readyState === WebSocket.OPEN) {
+    //     client.send(stringified)
+    //   }
+    // })
   })
 
   const handleJSReload = (watcher.handleJSReload = (
@@ -259,6 +287,7 @@ export function rewriteFileWithHMR(
 
   const registerDep = (e: StringLiteral) => {
     const deps = ensureMapEntry(hmrAcceptanceMap, importer)
+    //    console.log('rainmenxia-hmr-rewirte:e.value', e.value)
     const depPublicPath = resolveImport(root, importer, e.value, resolver)
     deps.add(depPublicPath)
     debugHmr(`        ${importer} accepts ${depPublicPath}`)
